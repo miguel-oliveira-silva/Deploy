@@ -1,0 +1,63 @@
+# =========================================================================
+# APPLICATION.YML — portfolio-service (produção / Docker / PostgreSQL)
+# =========================================================================
+
+spring:
+
+  application:
+    name: portfolio-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:portfoliodb}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USER:markovitz}
+    password: ${DB_PASSWORD:markovitz}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 30000
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: true
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    listener:
+      simple:
+        acknowledge-mode: auto
+        retry:
+          enabled: true
+          max-attempts: 3
+
+server:
+  port: 8083
+
+# URL do asset-service — em Docker Compose usamos o nome do serviço,
+# não localhost, pois cada container tem sua própria rede de loopback.
+asset-service:
+  base-url: ${ASSET_SERVICE_URL:http://asset-service:8082}
+
+markowitz:
+  risk-free-rate: ${RISK_FREE_RATE:0.1075}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.markovitz: INFO
+    org.hibernate.SQL: WARN
