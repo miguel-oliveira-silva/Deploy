@@ -1,0 +1,24 @@
+# =============================================================================
+# .gitignore — raiz do projeto
+# =============================================================================
+
+# Build outputs Java/Maven
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# Variáveis de ambiente com segredos
+.env
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+
+# SO
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
