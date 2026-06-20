@@ -1,0 +1,25 @@
+# =============================================================================
+# .gitignore — pasta terraform/
+# =============================================================================
+
+# State files — contêm dados sensíveis (senhas em texto plano dentro do state!)
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+
+# Diretório de plugins/providers baixados
+.terraform/
+
+# Plano salvo (pode conter segredos)
+*.tfplan
+
+# Variáveis reais (com senhas) — só o .example deve ir para o Git
+terraform.tfvars
+*.auto.tfvars
+
+# Chave privada gerada automaticamente pelo Terraform
+generated_key.pem
+
+# Logs do provider
+crash.log
+crash.*.log

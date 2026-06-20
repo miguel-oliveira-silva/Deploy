@@ -1,0 +1,29 @@
+# =============================================================================
+# terraform.tfvars.example
+# =============================================================================
+# Copie este arquivo para "terraform.tfvars" (mesma pasta) e ajuste os
+# valores. O arquivo "terraform.tfvars" NÃO deve ir para o Git (contém
+# senhas) — já está listado no .gitignore.
+#
+#   cp terraform.tfvars.example terraform.tfvars
+# =============================================================================
+
+location     = "Brazil South"
+project_name = "markovitz"
+environment  = "prod"
+vm_size      = "Standard_B2s"
+
+admin_username       = "azureuser"
+ssh_public_key_path  = "~/.ssh/id_rsa.pub"
+
+git_repo_url    = "https://github.com/miguel-oliveira-silva/Deploy.git"
+git_repo_branch = "main"
+
+db_user     = "markovitz"
+db_password = "TROQUE_ESTA_SENHA_FORTE_AQUI"
+
+rabbitmq_user     = "guest"
+rabbitmq_password = "TROQUE_ESTA_SENHA_FORTE_TAMBEM"
+
+# Restrinja ao seu IP em produção real, ex: "203.0.113.45/32"
+allowed_ssh_cidr = "0.0.0.0/0"
