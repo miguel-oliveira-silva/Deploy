@@ -133,29 +133,43 @@ terraform destroy
 
 ## 5. Maior dificuldade encontrada
 
-*(preencher com a experiência real do grupo — sugestão de pontos a abordar)*
+A maior dificuldade foi **garantir a ordem correta de inicialização dos containers**.
+No início, os microsserviços tentavam se conectar ao PostgreSQL e ao RabbitMQ
+imediatamente ao subir, enquanto esses serviços ainda estavam inicializando — causando
+erros de conexão e falhas no startup.
 
-- Garantir que os microsserviços só tentassem conectar ao banco/RabbitMQ depois
-  que esses estivessem realmente prontos (resolvido com `healthcheck` +
-  `depends_on: condition: service_healthy` no Compose, em vez de apenas
-  `depends_on` simples, que só espera o container *iniciar*, não *ficar pronto*).
-- Adaptar de H2 em memória (zero configuração) para PostgreSQL persistente,
-  que exige gerenciar credenciais, múltiplos bancos lógicos e scripts de
-  inicialização.
-- Build do Maven dentro da VM (em vez de usar imagens pré-buildadas de um
-  registry) torna o primeiro deploy mais lento, mas elimina a necessidade de
-  configurar autenticação com um Azure Container Registry — troca consciente
-  de simplicidade por tempo de build.
+A solução foi combinar duas abordagens:
+
+1. **`healthcheck` no Docker Compose** para PostgreSQL e RabbitMQ, verificando se os
+   serviços estavam *realmente prontos* (não apenas com o container rodando).
+2. **`depends_on: condition: service_healthy`** nos microsserviços, substituindo o
+   `depends_on` simples que só esperava o container *iniciar*, e não *ficar pronto*.
+
+Outra dificuldade foi a **migração de H2 (em memória) para PostgreSQL**: o H2 não
+exigia configuração, enquanto o PostgreSQL exige gerenciar credenciais, múltiplos
+bancos lógicos e um script de inicialização (`init-multi-db.sh`) para criar os
+4 bancos (`userdb`, `assetdb`, `portfoliodb`, `notificationdb`) automaticamente.
 
 ## 6. Lições aprendidas
 
-*(preencher com a experiência real do grupo — sugestão de pontos)*
+- **Infraestrutura como Código (IaC) é transformador**: com o Terraform, qualquer
+  integrante do grupo consegue recriar toda a infraestrutura do zero em minutos,
+  sem precisar clicar no portal Azure — essencial para consistência e recuperação
+  de desastres.
 
-- Infraestrutura como Código permite recriar o ambiente do zero de forma
-  determinística — útil tanto para recuperação de desastres quanto para
-  demonstrar o projeto em qualquer máquina/apresentação.
-- Separar credenciais (`.tfvars`, `.env`) do código versionado é essencial,
-  mesmo em projeto acadêmico.
-- `cloud-init` + `systemd` (serviço oneshot) permite reexecutar o
-  provisionamento manualmente (`sudo systemctl restart markovitz-bootstrap`)
-  sem precisar destruir e recriar a VM inteira — acelera muito a depuração.
+- **Separar credenciais do código é obrigatório**: usar `.tfvars` e `.env` (ambos
+  no `.gitignore`) garante que senhas nunca sejam commitadas no repositório — boa
+  prática que vale tanto em projetos acadêmicos quanto em produção.
+
+- **`cloud-init` é poderoso para automação de VMs**: a VM "se configura sozinha" no
+  primeiro boot sem nenhuma intervenção manual. Combinado com um serviço `systemd`,
+  é possível reexecutar o provisionamento sem destruir e recriar a VM inteira
+  (`sudo systemctl restart markovitz-bootstrap`), o que acelerou muito a depuração.
+
+- **Docker Compose como "contrato de ambiente"**: descrever todos os serviços em um
+  único `docker-compose.yml` versionado elimina o clássico problema de "funciona na
+  minha máquina" — o ambiente da VM é idêntico ao ambiente local de desenvolvimento.
+
+- **Healthchecks são essenciais em sistemas distribuídos**: sem eles, microsserviços
+  falham silenciosamente por tentarem se conectar a dependências que ainda não estão
+  prontas. Um pequeno investimento em configuração evita horas de depuração.
