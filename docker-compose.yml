@@ -1,0 +1,212 @@
+version: '3.8'
+
+# =============================================================================
+# DOCKER COMPOSE — Sistema Markovitz (Produção / Azure VM)
+# =============================================================================
+#
+# Orquestra toda a stack:
+#   - 1 PostgreSQL com 4 bancos lógicos (1 por microsserviço — "database per service")
+#   - 1 RabbitMQ (mensageria assíncrona)
+#   - 4 microsserviços Spring Boot, cada um buildado a partir do seu Dockerfile
+#
+# REDE:
+#   Todos os containers compartilham a rede "markovitz-net". Dentro dela,
+#   os serviços se enxergam pelo NOME DO SERVIÇO (ex: "postgres", "rabbitmq",
+#   "asset-service") em vez de "localhost" — por isso os application.yml usam
+#   variáveis de ambiente como DB_HOST=postgres.
+#
+# PERSISTÊNCIA:
+#   Os dados do Postgres e do RabbitMQ ficam em volumes Docker nomeados,
+#   sobrevivendo a reinícios e recriações de containers.
+#
+# COMO USAR:
+#   docker compose up -d --build      → builda as imagens e sobe tudo
+#   docker compose logs -f <serviço>  → acompanha logs de um serviço
+#   docker compose down               → para tudo (mantém os volumes)
+#   docker compose down -v            → para tudo e APAGA os dados também
+#
+# =============================================================================
+
+services:
+
+  # ===========================================================================
+  # POSTGRESQL — Banco relacional compartilhado (1 instância, 4 bancos lógicos)
+  # ===========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: markovitz-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-markovitz}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-markovitz}
+      # Banco "default" criado pela imagem; os outros 3 são criados pelo
+      # script init-multi-db.sh montado abaixo.
+      POSTGRES_DB: userdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Script de inicialização: cria assetdb, portfoliodb e notificationdb
+      # automaticamente na primeira subida do container.
+      - ./init-multi-db.sh:/docker-entrypoint-initdb.d/init-multi-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-markovitz}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - markovitz-net
+
+  # ===========================================================================
+  # RABBITMQ — Broker de mensagens assíncronas
+  # ===========================================================================
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: markovitz-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - markovitz-net
+
+  # ===========================================================================
+  # USER-SERVICE — porta 8081
+  # ===========================================================================
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: markovitz-user-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: userdb
+      DB_USER: ${DB_USER:-markovitz}
+      DB_PASSWORD: ${DB_PASSWORD:-markovitz}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - markovitz-net
+
+  # ===========================================================================
+  # ASSET-SERVICE — porta 8082
+  # ===========================================================================
+  asset-service:
+    build:
+      context: ./asset-service
+      dockerfile: Dockerfile
+    container_name: markovitz-asset-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: assetdb
+      DB_USER: ${DB_USER:-markovitz}
+      DB_PASSWORD: ${DB_PASSWORD:-markovitz}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - markovitz-net
+
+  # ===========================================================================
+  # PORTFOLIO-SERVICE — porta 8083 (chama asset-service via REST)
+  # ===========================================================================
+  portfolio-service:
+    build:
+      context: ./portfolio-service
+      dockerfile: Dockerfile
+    container_name: markovitz-portfolio-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: portfoliodb
+      DB_USER: ${DB_USER:-markovitz}
+      DB_PASSWORD: ${DB_PASSWORD:-markovitz}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+      # Nome do serviço no Docker Compose — resolvido pela rede interna
+      ASSET_SERVICE_URL: http://asset-service:8082
+      RISK_FREE_RATE: ${RISK_FREE_RATE:-0.1075}
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      asset-service:
+        condition: service_started
+    networks:
+      - markovitz-net
+
+  # ===========================================================================
+  # NOTIFICATION-SERVICE — porta 8084
+  # ===========================================================================
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: markovitz-notification-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: notificationdb
+      DB_USER: ${DB_USER:-markovitz}
+      DB_PASSWORD: ${DB_PASSWORD:-markovitz}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - markovitz-net
+
+networks:
+  markovitz-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
