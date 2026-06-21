@@ -36,7 +36,7 @@ write_files:
   - path: /opt/markovitz/bootstrap.sh
     permissions: '0755'
     content: |
-      ${bootstrap_script}
+      __BOOTSTRAP_SCRIPT__
 
   # ---------------------------------------------------------------------------
   # Serviço systemd que roda o bootstrap no boot e também permite re-executar

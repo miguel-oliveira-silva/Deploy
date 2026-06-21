@@ -24,14 +24,14 @@ locals {
 
 # -----------------------------------------------------------------------------
 # Monta o cloud-init.yaml final substituindo o placeholder do bootstrap script.
-# Usa file() + replace() em vez de templatefile() para evitar que o template
-# engine re-escape os caracteres $ do script bash renderizado (o que causava
-# $$ no lugar de $ e quebrava a execução do bootstrap na VM).
+# Usa file() + replace() com um placeholder sem $ para evitar que o engine
+# de templates do Terraform re-escape os cifrões do script bash, o que causava
+# $$ em vez de $ e quebrava a execução do bootstrap na VM.
 # -----------------------------------------------------------------------------
 locals {
   cloud_init_rendered = replace(
     file("${path.module}/cloud-init.yaml"),
-    "$${bootstrap_script}",
+    "__BOOTSTRAP_SCRIPT__",
     indent(6, local.bootstrap_script_rendered)
   )
 }
