@@ -29,8 +29,8 @@ resource "azurerm_public_ip" "main" {
   resource_group_name = azurerm_resource_group.main.name
   allocation_method   = "Static"
   sku                 = "Standard"
-  # Static + Standard = IP fixo, não muda se a VM for reiniciada.
-  tags = var.tags
+  zones               = ["2"]  # Zona 2 é a menos restrita em Brazil South para Azure for Students
+  tags                = var.tags
 }
 
 # -----------------------------------------------------------------------------

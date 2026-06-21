@@ -33,6 +33,7 @@ resource "azurerm_linux_virtual_machine" "main" {
   size                = var.vm_size
   admin_username      = var.admin_username
   tags                = var.tags
+  # zone não especificada — Azure escolhe a zona com capacidade disponível
 
   network_interface_ids = [
     azurerm_network_interface.main.id,
