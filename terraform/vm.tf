@@ -23,20 +23,17 @@ locals {
 }
 
 # -----------------------------------------------------------------------------
-# Renderiza o template cloud-init.yaml substituindo as variáveis (${...})
-# pelos valores reais vindos de variables.tf / terraform.tfvars.
+# Monta o cloud-init.yaml final substituindo o placeholder do bootstrap script.
+# Usa file() + replace() em vez de templatefile() para evitar que o template
+# engine re-escape os caracteres $ do script bash renderizado (o que causava
+# $$ no lugar de $ e quebrava a execução do bootstrap na VM).
 # -----------------------------------------------------------------------------
 locals {
-  cloud_init_rendered = templatefile("${path.module}/cloud-init.yaml", {
-    admin_username    = var.admin_username
-    git_repo_url      = var.git_repo_url
-    git_repo_branch   = var.git_repo_branch
-    db_user           = var.db_user
-    db_password       = var.db_password
-    rabbitmq_user     = var.rabbitmq_user
-    rabbitmq_password = var.rabbitmq_password
-    bootstrap_script  = indent(6, local.bootstrap_script_rendered)
-  })
+  cloud_init_rendered = replace(
+    file("${path.module}/cloud-init.yaml"),
+    "$${bootstrap_script}",
+    indent(6, local.bootstrap_script_rendered)
+  )
 }
 
 # -----------------------------------------------------------------------------
