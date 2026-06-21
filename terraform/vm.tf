@@ -35,7 +35,7 @@ locals {
     db_password       = var.db_password
     rabbitmq_user     = var.rabbitmq_user
     rabbitmq_password = var.rabbitmq_password
-    bootstrap_script  = local.bootstrap_script_rendered
+    bootstrap_script  = indent(6, local.bootstrap_script_rendered)
   })
 }
 

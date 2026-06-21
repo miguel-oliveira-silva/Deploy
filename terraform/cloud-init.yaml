@@ -35,8 +35,8 @@ write_files:
   # ---------------------------------------------------------------------------
   - path: /opt/markovitz/bootstrap.sh
     permissions: '0755'
-    encoding: b64
-    content: ${base64encode(bootstrap_script)}
+    content: |
+      ${bootstrap_script}
 
   # ---------------------------------------------------------------------------
   # Serviço systemd que roda o bootstrap no boot e também permite re-executar
