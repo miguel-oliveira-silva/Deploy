@@ -89,8 +89,49 @@ variable "tags" {
   description = "Tags aplicadas a todos os recursos."
   type        = map(string)
   default = {
-    projeto    = "markovitz-portfolio-optimizer"
-    disciplina = "devops"
+    projeto        = "markovitz-portfolio-optimizer"
+    disciplina     = "devops"
     gerenciado_por = "terraform"
   }
+}
+
+# =============================================================================
+# Feature Flags — Melhorias Incrementais de Infraestrutura
+# =============================================================================
+# Permite habilitar/desabilitar melhorias individualmente para validação
+# progressiva sem riscos. Ver Requirements 14.1-14.8
+# =============================================================================
+
+variable "feature_flags" {
+  description = "Feature flags para habilitar/desabilitar melhorias na infraestrutura individualmente"
+  type = object({
+    retry_logic           = bool
+    sequential_build      = bool
+    health_checks         = bool
+    structured_logs       = bool
+    resource_monitoring   = bool
+    auto_rollback         = bool
+    pre_deploy_validation = bool
+    maintenance_scripts   = bool
+    log_parser            = bool
+    deployment_report     = bool
+  })
+  default = {
+    retry_logic           = true
+    sequential_build      = true
+    health_checks         = true
+    structured_logs       = true
+    resource_monitoring   = true
+    auto_rollback         = false # Requer opt-in explícito
+    pre_deploy_validation = true
+    maintenance_scripts   = true
+    log_parser            = true
+    deployment_report     = true
+  }
+}
+
+variable "enable_auto_rollback" {
+  description = "Se habilitado, executa 'terraform destroy' automaticamente caso o bootstrap falhe após 30 minutos. Requer opt-in explícito para evitar destruição acidental. Ver Requirement 10."
+  type        = bool
+  default     = false
 }

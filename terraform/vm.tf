@@ -3,18 +3,39 @@
 # =============================================================================
 
 # -----------------------------------------------------------------------------
+# Renderiza o template bootstrap.sh.tpl com as variáveis e feature flags
+# -----------------------------------------------------------------------------
+locals {
+  bootstrap_script_rendered = templatefile("${path.module}/templates/bootstrap.sh.tpl", {
+    admin_username             = var.admin_username
+    git_repo_url               = var.git_repo_url
+    git_repo_branch            = var.git_repo_branch
+    db_user                    = var.db_user
+    db_password                = var.db_password
+    rabbitmq_user              = var.rabbitmq_user
+    rabbitmq_password          = var.rabbitmq_password
+    enable_retry_logic         = var.feature_flags.retry_logic
+    enable_structured_logs     = var.feature_flags.structured_logs
+    enable_sequential_build    = var.feature_flags.sequential_build
+    enable_health_checks       = var.feature_flags.health_checks
+    enable_resource_monitoring = var.feature_flags.resource_monitoring
+  })
+}
+
+# -----------------------------------------------------------------------------
 # Renderiza o template cloud-init.yaml substituindo as variáveis (${...})
 # pelos valores reais vindos de variables.tf / terraform.tfvars.
 # -----------------------------------------------------------------------------
 locals {
   cloud_init_rendered = templatefile("${path.module}/cloud-init.yaml", {
-    admin_username     = var.admin_username
-    git_repo_url       = var.git_repo_url
-    git_repo_branch    = var.git_repo_branch
-    db_user            = var.db_user
-    db_password        = var.db_password
-    rabbitmq_user      = var.rabbitmq_user
-    rabbitmq_password  = var.rabbitmq_password
+    admin_username    = var.admin_username
+    git_repo_url      = var.git_repo_url
+    git_repo_branch   = var.git_repo_branch
+    db_user           = var.db_user
+    db_password       = var.db_password
+    rabbitmq_user     = var.rabbitmq_user
+    rabbitmq_password = var.rabbitmq_password
+    bootstrap_script  = local.bootstrap_script_rendered
   })
 }
 

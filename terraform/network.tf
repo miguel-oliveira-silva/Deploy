@@ -29,7 +29,7 @@ resource "azurerm_public_ip" "main" {
   resource_group_name = azurerm_resource_group.main.name
   allocation_method   = "Static"
   sku                 = "Standard"
-  zones               = ["2"]  # Zona 2 é a menos restrita em Brazil South para Azure for Students
+  zones               = ["2"] # Zona 2 é a menos restrita em Brazil South para Azure for Students
   tags                = var.tags
 }
 
