@@ -106,33 +106,21 @@ public class User {
         this.createdAt = LocalDateTime.now();
     }
 
-    // =========================================================================
-    // toString — Para exibir o objeto em logs de forma legível
-    // =========================================================================
-
     @Override
     public String toString() {
         return "User{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", email='" + email + '\'' +
-                // password INTENCIONALMENTE omitido nos logs por segurança
                 ", riskProfile=" + riskProfile +
                 ", createdAt=" + createdAt +
                 '}';
     }
 
-    // =========================================================================
-    // ENUM DE PERFIL DE RISCO
-    // =========================================================================
+    // Enum de Perfil de Risco
 
     /**
-     * Enum é uma classe especial com um conjunto fixo de constantes.
-     * Usar enum ao invés de String evita valores inválidos
-     * (ex: "ARROJADO" digitado errado).
-     *
-     * Esta é uma "nested enum" (enum dentro da classe User) — boa prática quando
-     * o enum pertence conceitualmente à entidade.
+     * Perfis de risco do investidor segundo a Teoria de Markowitz.
      */
     public enum RiskProfile {
 
