@@ -78,7 +78,6 @@ public class User {
     // Builder Pattern
     public static Builder builder() { return new Builder(); }
 
-    /** Classe Builder interna — acumula valores e cria o User no final */
     public static class Builder {
         private Long id;
         private String name;
@@ -87,7 +86,6 @@ public class User {
         private RiskProfile riskProfile;
         private LocalDateTime createdAt;
 
-        // Cada método "seta" um campo e retorna o próprio Builder (encadeamento)
         public Builder id(Long id)                   { this.id = id; return this; }
         public Builder name(String name)             { this.name = name; return this; }
         public Builder email(String email)           { this.email = email; return this; }
@@ -95,27 +93,14 @@ public class User {
         public Builder riskProfile(RiskProfile rp)   { this.riskProfile = rp; return this; }
         public Builder createdAt(LocalDateTime dt)   { this.createdAt = dt; return this; }
 
-        /** Cria e retorna o objeto User com os valores acumulados */
         public User build() {
             return new User(id, name, email, password, riskProfile, createdAt);
         }
     }
 
-    // =========================================================================
-    // CALLBACK JPA
-    // =========================================================================
+    // JPA Callback
 
-    /**
-     * @PrePersist → Executado automaticamente pelo JPA ANTES de inserir no banco.
-     *
-     * Isso garante que createdAt seja sempre preenchido automaticamente,
-     * sem precisar definir manualmente ao criar um User.
-     *
-     * Outros callbacks JPA úteis:
-     *   @PreUpdate  → antes de atualizar
-     *   @PostLoad   → depois de carregar do banco
-     *   @PreRemove  → antes de deletar
-     */
+    /** @PrePersist - executado automaticamente antes de inserir no banco */
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
