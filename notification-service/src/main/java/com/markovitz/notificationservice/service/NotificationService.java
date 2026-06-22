@@ -20,35 +20,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * ============================================================================
- * NOTIFICATION SERVICE — Consumidor de Eventos e Gerador de Notificações
- * ============================================================================
+ * Notification Service - consome eventos do RabbitMQ e gera notificações.
  *
- * DOIS CONSUMIDORES DE EVENTOS:
- * ─────────────────────────────────────────────────────────────────────────
+ * Consumidores:
+ *   handleUserRegistered() - consome "user.registered.queue"
+ *   handlePortfolioOptimized() - consome "portfolio.optimized.queue"
  *
- *   handleUserRegistered()    → consome "user.registered.queue"
- *   handlePortfolioOptimized() → consome "portfolio.optimized.queue"
- *
- * COMO @RabbitListener FUNCIONA (revisão aprofundada):
- * ─────────────────────────────────────────────────────────────────────────
- *
- * Quando o Spring Boot inicia, o Spring AMQP:
- *   1. Cria uma thread ouvinte para cada @RabbitListener
- *   2. A thread fica em loop aguardando mensagens na fila
- *   3. Quando uma mensagem chega:
- *      a. Jackson deserializa JSON → objeto Java
- *      b. Spring chama o método anotado com o objeto
- *      c. Se retornar normalmente → ACK (mensagem confirmada e removida da fila)
- *      d. Se lançar exceção → NACK (mensagem pode ser re-enfileirada)
- *
- * PROCESSAMENTO PARALELO:
- * O Spring AMQP pode processar múltiplas mensagens em paralelo usando
- * um pool de threads. Configurado em application.yml:
- *   spring.rabbitmq.listener.simple.concurrency: 2
- *   spring.rabbitmq.listener.simple.max-concurrency: 5
- *
- * ============================================================================
+ * @RabbitListener funciona assim:
+ * - Spring AMQP cria uma thread ouvinte para cada método anotado
+ * - Quando chega mensagem: deserializa JSON -> chama método -> ACK ou NACK
+ * - Processamento paralelo configurado em application.yml (concurrency: 2-5)
  */
 @Service
 public class NotificationService {
@@ -61,25 +42,13 @@ public class NotificationService {
         this.notificationRepository = notificationRepository;
     }
 
-    // =========================================================================
-    // CONSUMIDOR 1: Evento de Usuário Cadastrado
-    // =========================================================================
+    // Consumidor de evento de usuário cadastrado
 
     /**
-     * Processa o evento de usuário registrado e cria uma notificação de boas-vindas.
+     * Processa evento de usuário registrado e cria notificação de boas-vindas.
      *
-     * @RabbitListener:
-     * ─────────────────────────────────────────────────────────────────────
-     * queues = RabbitMQConfig.USER_REGISTERED_QUEUE
-     *   → Nome da fila a escutar: "user.registered.queue"
-     *
-     * O Spring AMQP:
-     *   1. Recebe a mensagem JSON da fila
-     *   2. Usa Jackson2JsonMessageConverter (configurado em RabbitMQConfig)
-     *      para converter o JSON em UserRegisteredEvent
-     *   3. Chama este método com o objeto convertido
-     *
-     * @param event evento de usuário cadastrado, deserializado automaticamente do JSON
+     * @RabbitListener: escuta "user.registered.queue"
+     * Spring AMQP deserializa o JSON automaticamente usando Jackson2JsonMessageConverter
      */
     @RabbitListener(queues = RabbitMQConfig.USER_REGISTERED_QUEUE)
     @Transactional
@@ -88,9 +57,7 @@ public class NotificationService {
                 event.getUserName(), event.getUserEmail());
 
         try {
-            // ================================================================
-            // COMPOSIÇÃO DA MENSAGEM DE BOAS-VINDAS
-            // ================================================================
+            // Composição da mensagem de boas-vindas
             String title = "🎉 Bem-vindo ao Markovitz, " + event.getUserName() + "!";
 
             String message = String.join("\n",
@@ -107,9 +74,7 @@ public class NotificationService {
                     "Bons investimentos! 📈"
             );
 
-            // ================================================================
-            // CRIAÇÃO E PERSISTÊNCIA DA NOTIFICAÇÃO
-            // ================================================================
+            // Cria e salva a notificação
             Notification notification = Notification.builder()
                     .userId(event.getUserId())
                     .type(NotificationType.BOAS_VINDAS)
@@ -122,17 +87,7 @@ public class NotificationService {
 
             notification = notificationRepository.save(notification);
 
-            // ================================================================
-            // SIMULAÇÃO DE ENVIO
-            // ================================================================
-            // Em produção, aqui você chamaria um serviço de email:
-            //   emailService.send(event.getUserEmail(), title, message);
-            // Ou um serviço de push notifications:
-            //   pushService.send(event.getUserId(), title, message);
-            //
-            // Para este projeto, logamos no console para demonstrar que funciona.
-            // ================================================================
-
+            // Simula o envio (em produção seria email/push notification)
             log.info("╔══════════════════════════════════════════════════════════════╗");
             log.info("║  📧 NOTIFICAÇÃO DE BOAS-VINDAS                               ║");
             log.info("╠══════════════════════════════════════════════════════════════╣");
@@ -140,7 +95,6 @@ public class NotificationService {
             log.info("║  Título:  {}                ", title);
             log.info("╚══════════════════════════════════════════════════════════════╝");
 
-            // Marca como ENVIADA e registra o horário
             notification.setStatus(NotificationStatus.ENVIADA);
             notification.setSentAt(LocalDateTime.now());
             notificationRepository.save(notification);
@@ -150,7 +104,7 @@ public class NotificationService {
         } catch (Exception e) {
             log.error("❌ Erro ao processar notificação de boas-vindas para usuário {}: {}",
                     event.getUserId(), e.getMessage());
-            // Salva com status FALHA para possível re-tentativa futura
+            // Salva com status FALHA para possível re-tentativa
             Notification failed = Notification.builder()
                     .userId(event.getUserId())
                     .type(NotificationType.BOAS_VINDAS)
@@ -164,17 +118,11 @@ public class NotificationService {
         }
     }
 
-    // =========================================================================
-    // CONSUMIDOR 2: Evento de Carteira Otimizada
-    // =========================================================================
+    // Consumidor de evento de carteira otimizada
 
     /**
-     * Processa o evento de portfólio otimizado e cria uma notificação detalhada.
-     *
-     * Este método é o mais rico em conteúdo — ele formata os resultados
-     * da otimização de Markowitz de forma legível para o usuário.
-     *
-     * @param event evento de portfólio otimizado, deserializado do JSON
+     * Processa evento de portfólio otimizado e cria notificação detalhada.
+     * Formata os resultados da otimização de Markowitz de forma legível.
      */
     @RabbitListener(queues = RabbitMQConfig.PORTFOLIO_OPTIMIZED_QUEUE)
     @Transactional
@@ -183,16 +131,13 @@ public class NotificationService {
                 event.getPortfolioName(), event.getPortfolioId());
 
         try {
-            // ================================================================
-            // FORMATAÇÃO DOS RESULTADOS DA OTIMIZAÇÃO
-            // ================================================================
+            // Formata os resultados da otimização
             String goalDesc = "MAX_SHARPE".equals(event.getOptimizationGoal())
                     ? "Máximo Índice de Sharpe (melhor retorno/risco)"
                     : "Mínima Variância (menor risco possível)";
 
             String title = "✅ Carteira '" + event.getPortfolioName() + "' otimizada!";
 
-            // Formata os pesos de cada ativo
             String weightsFormatted = formatWeights(event.getAssetWeights());
 
             String message = String.join("\n",
@@ -211,9 +156,7 @@ public class NotificationService {
                     "  não garante rentabilidade futura."
             );
 
-            // ================================================================
-            // SALVA E ENVIA A NOTIFICAÇÃO
-            // ================================================================
+            // Salva e envia a notificação
             Notification notification = Notification.builder()
                     .userId(event.getUserId())
                     .type(NotificationType.CARTEIRA_OTIMIZADA)
@@ -226,7 +169,7 @@ public class NotificationService {
 
             notification = notificationRepository.save(notification);
 
-            // Log formatado simulando o envio da notificação
+            // Log da notificação
             log.info("╔══════════════════════════════════════════════════════════════╗");
             log.info("║  📊 NOTIFICAÇÃO DE OTIMIZAÇÃO                                ║");
             log.info("╠══════════════════════════════════════════════════════════════╣");
@@ -262,15 +205,10 @@ public class NotificationService {
         }
     }
 
-    // =========================================================================
-    // CONSULTAS REST
-    // =========================================================================
+    // Consultas REST
 
     /**
      * Lista todas as notificações de um usuário, da mais recente para a mais antiga.
-     *
-     * @param userId ID do usuário
-     * @return lista de DTOs de notificações
      */
     @Transactional(readOnly = true)
     public List<NotificationResponseDTO> findByUserId(Long userId) {
@@ -282,9 +220,7 @@ public class NotificationService {
                 .toList();
     }
 
-    // =========================================================================
-    // MÉTODOS AUXILIARES
-    // =========================================================================
+    // Métodos auxiliares
 
     /**
      * Formata o mapa de pesos em texto legível.
@@ -294,12 +230,12 @@ public class NotificationService {
         if (weights == null || weights.isEmpty()) return "(sem dados)";
 
         return weights.entrySet().stream()
-                .sorted(Map.Entry.<String, Double>comparingByValue().reversed()) // do maior peso para o menor
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
                 .map(e -> String.format("%s: %.1f%%", e.getKey(), e.getValue() * 100))
                 .collect(Collectors.joining(" | "));
     }
 
-    /** Retorna 0.0 se o valor for null (evita NullPointerException no formatador) */
+    /** Retorna 0.0 se o valor for null */
     private double safeDouble(Double value) {
         return value != null ? value : 0.0;
     }

@@ -4,31 +4,18 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * ============================================================================
- * ENTIDADE NOTIFICATION — Notificação Persistida no Banco
- * ============================================================================
+ * Entidade Notification - notificações persistidas no banco.
  *
  * Cada evento consumido do RabbitMQ gera uma Notification salva aqui.
- * Isso permite:
- *   - Histórico de notificações para o usuário
- *   - Rastreabilidade (qual evento gerou qual notificação)
- *   - Re-envio em caso de falha (notificações com status FALHA podem ser re-processadas)
- *   - API para o front-end consultar notificações
+ * Permite: histórico de notificações, rastreabilidade, re-envio em caso de falha.
  *
- * CICLO DE VIDA:
+ * Ciclo de vida:
  *   PENDENTE → criada ao receber o evento
- *   ENVIADA  → processada com sucesso (email enviado, push enviado, etc.)
- *   FALHA    → erro no envio (ex: serviço de email indisponível)
+ *   ENVIADA  → processada com sucesso
+ *   FALHA    → erro no envio
  *
- * NOTA SOBRE "ENVIO":
- * Neste projeto, o "envio" é simulado — logamos no console e marcamos como ENVIADA.
- * Em produção, você integraria com:
- *   - Spring Mail (JavaMailSender) para emails
- *   - Firebase Cloud Messaging para push notifications
- *   - Twilio para SMS
- *   - Slack/WhatsApp APIs para mensagens
- *
- * ============================================================================
+ * Obs: neste projeto o "envio" é simulado (apenas log no console).
+ * Em produção seria integrado com Spring Mail, Firebase, Twilio, etc.
  */
 @Entity
 @Table(name = "notifications")
@@ -39,17 +26,15 @@ public class Notification {
     private Long id;
 
     /**
-     * ID do usuário destinatário da notificação.
-     * Referência ao user-service (não é FK de banco — microsserviços têm bancos separados).
+     * ID do usuário destinatário.
+     * Referência ao user-service (não é FK - microsserviços têm bancos separados).
      */
     @Column(nullable = false)
     private Long userId;
 
     /**
-     * TIPO DA NOTIFICAÇÃO — indica qual evento originou esta notificação.
-     *
-     * @Enumerated(STRING) → salva "BOAS_VINDAS" no banco, não "0" ou "1".
-     * Isso torna o banco legível e evita bugs ao reordenar o enum.
+     * Tipo da notificação - indica qual evento originou.
+     * @Enumerated(STRING) salva "BOAS_VINDAS" no banco, não "0" ou "1".
      */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -60,23 +45,18 @@ public class Notification {
     private String title;
 
     /**
-     * Corpo da mensagem.
-     * @Column(length = 2000) → VARCHAR(2000) para mensagens longas.
-     * O resultado da otimização pode ser bem detalhado.
+     * Corpo da mensagem. VARCHAR(2000) para mensagens longas.
      */
     @Column(nullable = false, length = 2000)
     private String message;
 
-    /**
-     * STATUS atual da notificação.
-     */
+    /** Status atual da notificação */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private NotificationStatus status;
 
     /**
-     * REFERÊNCIA AO EVENTO DE ORIGEM.
-     * Armazenamos o nome do evento para rastreabilidade.
+     * Nome do evento de origem para rastreabilidade.
      * Ex: "user.registered", "portfolio.optimized"
      */
     @Column(length = 100)
@@ -84,7 +64,7 @@ public class Notification {
 
     /**
      * ID do recurso de origem (ex: ID do portfólio otimizado).
-     * Útil para links no front-end: "Clique aqui para ver sua carteira".
+     * Útil para links no front-end.
      */
     @Column
     private Long sourceId;
@@ -95,9 +75,7 @@ public class Notification {
     @Column
     private LocalDateTime sentAt;
 
-    // =========================================================================
-    // ENUMS
-    // =========================================================================
+    // Enums
 
     public enum NotificationType {
         /** Notificação enviada quando um novo usuário se cadastra */
@@ -114,9 +92,7 @@ public class Notification {
         FALHA
     }
 
-    // =========================================================================
-    // CONSTRUTORES
-    // =========================================================================
+    // Construtores
 
     public Notification() {}
 
@@ -133,9 +109,7 @@ public class Notification {
         this.sourceId = sourceId;
     }
 
-    // =========================================================================
-    // BUILDER
-    // =========================================================================
+    // Builder
 
     public static Builder builder() { return new Builder(); }
 
@@ -163,18 +137,14 @@ public class Notification {
         }
     }
 
-    // =========================================================================
-    // JPA CALLBACK
-    // =========================================================================
+    // JPA Callback
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
 
-    // =========================================================================
-    // GETTERS E SETTERS
-    // =========================================================================
+    // Getters e Setters
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

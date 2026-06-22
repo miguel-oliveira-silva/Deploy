@@ -1,0 +1,16 @@
+# Dependências para população do banco de dados Markovitz
+# Instalar: pip install -r requirements.txt
+
+# Cliente HTTP
+requests>=2.31.0
+
+# Download de dados financeiros
+yfinance>=0.2.36
+
+# Análise de dados
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Visualização (apenas para populate_and_optimize.py com gráfico)
+matplotlib>=3.7.0
+scipy>=1.10.0
