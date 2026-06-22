@@ -68,11 +68,6 @@ public class User {
     public RiskProfile getRiskProfile() { return riskProfile; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 
-    // =========================================================================
-    // SETTERS — Métodos para DEFINIR os valores dos campos
-    // =========================================================================
-    // O JPA usa setters ao reconstruir objetos do banco.
-
     public void setId(Long id) { this.id = id; }
     public void setName(String name) { this.name = name; }
     public void setEmail(String email) { this.email = email; }
@@ -80,18 +75,7 @@ public class User {
     public void setRiskProfile(RiskProfile riskProfile) { this.riskProfile = riskProfile; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    // =========================================================================
-    // BUILDER PATTERN — Para construção fluente de objetos
-    // =========================================================================
-    // O padrão Builder permite criar objetos de forma legível:
-    //   User user = User.builder()
-    //                   .name("João")
-    //                   .email("joao@email.com")
-    //                   .build();
-    //
-    // É especialmente útil quando um objeto tem muitos campos opcionais.
-
-    /** Ponto de entrada do Builder */
+    // Builder Pattern
     public static Builder builder() { return new Builder(); }
 
     /** Classe Builder interna — acumula valores e cria o User no final */
