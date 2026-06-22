@@ -4,121 +4,51 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * ============================================================================
- * ENTIDADE USER — Representa um usuário no banco de dados
- * ============================================================================
+ * Entidade User - representa um usuário no banco de dados.
  *
- * Em JPA, uma "Entity" é uma classe Java que mapeia para uma tabela no banco.
- * Cada instância da classe = uma linha na tabela.
- * Cada campo da classe = uma coluna na tabela.
+ * Em JPA, uma Entity mapeia para uma tabela no banco.
+ * Cada instância = uma linha, cada campo = uma coluna.
  *
- * ANOTAÇÕES DO JPA:
- * ─────────────────────────────────────────────────────────────────────────
- *
- * @Entity        → Marca a classe como uma entidade JPA (tabela no banco)
- *
- * @Table         → Configura o nome da tabela. Se omitido, usa o nome da classe.
- *
- * @Id            → Marca o campo como chave primária da tabela
- *
- * @GeneratedValue → Define a estratégia de geração do ID:
- *   - IDENTITY → banco gera o ID (AUTO_INCREMENT no MySQL, SERIAL no PostgreSQL)
- *   - SEQUENCE → usa uma sequence do banco (padrão no Oracle e PostgreSQL)
- *   - AUTO     → Spring escolhe a estratégia baseado no banco de dados
- *
- * @Column        → Configura a coluna (nome, nullable, unique, length, etc.)
- *
- * @Enumerated    → Define como um enum é salvo no banco:
- *   - EnumType.STRING  → salva o nome ("CONSERVADOR") — recomendado
- *   - EnumType.ORDINAL → salva o número (0, 1, 2) — problemático se mudar ordem
- *
- * NOTA: Neste arquivo escrevemos os getters e setters manualmente (sem Lombok)
- * para que o código seja 100% explícito e fácil de estudar.
- * Em projetos reais usa-se @Data do Lombok para gerar tudo automaticamente.
- *
- * ============================================================================
+ * Anotações principais:
+ * @Entity - marca como tabela
+ * @Id - chave primária
+ * @GeneratedValue - geração automática de ID
+ * @Column - configuração da coluna (nullable, unique, length)
+ * @Enumerated(STRING) - salva enum como texto no banco
  */
-@Entity                 // JPA: esta classe é uma tabela no banco
-@Table(name = "users")  // JPA: nome da tabela no banco (evitamos "user" pois é palavra reservada em SQL)
+@Entity
+@Table(name = "users")
 public class User {
 
-    /**
-     * CHAVE PRIMÁRIA — Identificador único do usuário.
-     *
-     * @Id      → este campo é a chave primária
-     * @GeneratedValue → o banco gera o valor automaticamente
-     * GenerationType.IDENTITY → usa AUTO_INCREMENT (perfeito para H2 e MySQL)
-     *
-     * Long vs Integer: Long vai até ~9,2 quintilhões — mais seguro para sistemas grandes.
-     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * NOME DO USUÁRIO
-     *
-     * @Column configura:
-     *   nullable = false → NOT NULL no banco (campo obrigatório)
-     *   length = 100     → VARCHAR(100) no banco
-     */
     @Column(nullable = false, length = 100)
     private String name;
 
-    /**
-     * EMAIL — Único por usuário (não pode haver dois usuários com o mesmo email)
-     *
-     * unique = true → cria uma UNIQUE CONSTRAINT no banco.
-     * Se tentar inserir email duplicado, o banco lança uma exceção.
-     */
+    /** Email único por usuário */
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
-    /**
-     * SENHA — Em produção SEMPRE deve ser armazenada com hash (BCrypt, Argon2).
-     * Para este trabalho escolar, simplificamos armazenando o texto direto.
-     * NUNCA faça isso em produção!
-     */
+    /** Senha - em produção deve usar hash (BCrypt) */
     @Column(nullable = false)
     private String password;
 
     /**
-     * PERFIL DE RISCO DO INVESTIDOR
-     *
-     * Na Teoria de Markowitz, o perfil de risco do investidor influencia
-     * quais portfólios são "ótimos" para ele:
-     *
-     * - CONSERVADOR → prefere menor risco, aceita menor retorno
-     * - MODERADO    → equilíbrio entre risco e retorno
-     * - AGRESSIVO   → aceita maior risco em busca de maior retorno
-     *
-     * @Enumerated(STRING) → salva "CONSERVADOR" na coluna, não o número 0.
-     * Isso é mais seguro: se você reordenar o enum, os dados não corrompem.
+     * Perfil de risco do investidor.
+     * Influencia qual portfólio é ótimo na Teoria de Markowitz.
      */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RiskProfile riskProfile;
 
-    /**
-     * DATA/HORA DE CADASTRO
-     *
-     * LocalDateTime → data e hora sem timezone (suficiente para este projeto)
-     * Em produção com usuários internacionais, considere usar ZonedDateTime ou Instant.
-     *
-     * updatable = false → uma vez definido, este campo nunca é atualizado pelo JPA.
-     * Isso garante que a data de cadastro nunca mude.
-     */
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // =========================================================================
-    // CONSTRUTORES
-    // =========================================================================
-
-    /** Construtor padrão — OBRIGATÓRIO para o JPA funcionar! */
+    // Construtores
     public User() {}
 
-    /** Construtor completo — usado pelo Builder pattern */
     public User(Long id, String name, String email, String password,
                 RiskProfile riskProfile, LocalDateTime createdAt) {
         this.id = id;
@@ -129,10 +59,7 @@ public class User {
         this.createdAt = createdAt;
     }
 
-    // =========================================================================
-    // GETTERS — Métodos para LER os valores dos campos
-    // =========================================================================
-    // O JPA, Jackson e outros frameworks usam getters para acessar os dados.
+    // Getters e Setters
 
     public Long getId() { return id; }
     public String getName() { return name; }
